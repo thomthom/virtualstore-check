@@ -9,36 +9,28 @@ require 'sketchup.rb'
 begin
   require 'TT_Lib2/core.rb'
 rescue LoadError => e
-  timer = UI.start_timer( 0, false ) {
-    UI.stop_timer( timer )
-    filename = File.basename( __FILE__ )
-    message = "#{filename} require TT_Lib² to be installed.\n"
-    message << "\n"
-    message << "Would you like to open a webpage where you can download TT_Lib²?"
-    result = UI.messagebox( message, MB_YESNO )
-    if result == 6 # YES
-      UI.openURL( 'http://www.thomthom.net/software/tt_lib2/' )
+  module TT
+    if @lib2_update.nil?
+      url = 'http://www.thomthom.net/software/sketchup/tt_lib2/errors/not-installed'
+      options = {
+        :dialog_title => 'TT_Lib² Not Installed',
+        :scrollable => false, :resizable => false, :left => 200, :top => 200
+      }
+      w = UI::WebDialog.new( options )
+      w.set_size( 500, 300 )
+      w.set_url( "#{url}?plugin=#{File.basename( __FILE__ )}" )
+      w.show
+      @lib2_update = w
     end
-  }
+  end
 end
 
 
 #-------------------------------------------------------------------------------
 
-if defined?( TT::Lib ) && TT::Lib.compatible?( '2.6.0', 'VirtualStore' )
+if defined?( TT::Lib ) && TT::Lib.compatible?( '2.7.0', 'VirtualStore' )
 
 module TT::Plugins::VirtualStore
-  
-  
-  ### CONSTANTS ### ------------------------------------------------------------
-  
-  # Plugin information
-  PLUGIN_ID       = 'TT_VirtualStore'.freeze
-  PLUGIN_NAME     = 'VirtualStore'.freeze
-  PLUGIN_VERSION  = TT::Version.new(1,0,0).freeze
-  
-  # Version information
-  RELEASE_DATE    = '10 Oct 12'.freeze
   
   
   ### MENU & TOOLBARS ### ------------------------------------------------------
@@ -48,20 +40,6 @@ module TT::Plugins::VirtualStore
     m = TT.menu( 'Plugins' )
     m.add_item( 'Check VirtualStore' ) { self.check_virtualstore }
   end 
-  
-  
-  ### LIB FREDO UPDATER ### ----------------------------------------------------
-  
-  def self.register_plugin_for_LibFredo6
-    {   
-      :name => PLUGIN_NAME,
-      :author => 'thomthom',
-      :version => PLUGIN_VERSION.to_s,
-      :date => RELEASE_DATE,   
-      :description => 'Opens the VirtualStore folder for the Plugins folder.',
-      :link_info => 'http://sketchucation.com/forums/viewtopic.php?f=180&t=48399'
-    }
-  end
   
   
   ### MAIN SCRIPT ### ----------------------------------------------------------
@@ -110,11 +88,11 @@ module TT::Plugins::VirtualStore
   # @note Debug method to reload the plugin.
   #
   # @example
-  #   TT::Plugins::VirtualStore.reload
+  #   TT::Plugins::Template.reload
   #
-  # @param [Boolean] tt_lib
+  # @param [Boolean] tt_lib Reloads TT_Lib2 if +true+.
   #
-  # @return [Integer]
+  # @return [Integer] Number of files reloaded.
   # @since 1.0.0
   def self.reload( tt_lib = false )
     original_verbose = $VERBOSE
@@ -123,15 +101,19 @@ module TT::Plugins::VirtualStore
     # Core file (this)
     load __FILE__
     # Supporting files
-    #x = Dir.glob( File.join(PATH, '*.{rb,rbs}') ).each { |file|
-    #  load file
-    #}
-    #x.length
+    if defined?( PATH ) && File.exist?( PATH )
+      x = Dir.glob( File.join(PATH, '*.{rb,rbs}') ).each { |file|
+        load file
+      }
+      x.length + 1
+    else
+      1
+    end
   ensure
     $VERBOSE = original_verbose
   end
 
-end # module TT::Plugins::VirtualStore
+end # module
 
 end # if TT_Lib
 
